@@ -5,6 +5,7 @@ import re
 import pymysql
 from bs4 import BeautifulSoup
 import config
+import function.mail as mail
 import time
 
 # Get the CVEs' url
@@ -83,6 +84,21 @@ def store_cve(cve_infos):
             conn.rollback()
     conn.close()
 
+# Send mail
+def send_cve_mail(cve_infos):
+    # Generate mail_contents
+    mail_msg = """<h4>每日CVE推送...</h4><table><thead><tr><th>CVEID</th><th>描述</th><th>CNA</th><th>CVE创建时间</th><th>参考</th></tr></thead><tbody>"""
+    # mail_msg = """<h4>每日CVE推送...</h4><table><thead><tr><th>CVEID</th><th></th></thead><tbody>"""
+    for dic in cve_infos:
+        mail_msg += '''<tr>%s</tr><tr>%s</tr><tr>%s</tr><tr>%s</tr><tr>%s</tr><br>\n''' % (dic["CVE_ID"].encode('utf-8'),dic["Description"].encode('utf-8'),dic["Assigning_CNA"].encode('utf-8'),dic["Data_Entry_Created"].encode('utf-8'),dic["Reference_url"].encode('utf-8'))
+        # mail_msg += '''<tr>%s</tr><tr><a href="%s"></tr>''' % (dic["CVE_ID"].encode('utf-8'), 'http://cve.mitre.org/cgi-bin/cvename.cgi?name=' + dic["CVE_ID"].encode('utf-8'))
+    mail_msg += "</tbody></table>"
+    # Send mail
+    for receiver in config.mail_receivers:
+        print('Sending ' + receiver)
+        print(mail_msg)
+        mail.sendmail(config.mail_sender, receiver, mail_msg, config.mail_config)
+
 
 urls = []
 cve_infos = []
@@ -96,5 +112,9 @@ cve_infos = download_cve_info(urls)
 print("Down")
 # Store the CVEs' info
 print("Storing the CVEs' info...")
-store_cve(cve_infos)
+# store_cve(cve_infos)
+print("Down")
+# Send mail
+print("Sending the mail...")
+send_cve_mail(cve_infos)
 print("Down")
